@@ -3,6 +3,7 @@ import { useDispatch } from "react-redux";
 import toast from "react-hot-toast";
 import { setTheme } from "../features/themeSlice";
 import { useNavigate } from "react-router-dom";
+import { ArrowLeftIcon } from "lucide-react";
 
 const Settings = () => {
   const dispatch = useDispatch();
@@ -35,6 +36,12 @@ const Settings = () => {
 
   return (
     <div className="max-w-xl mx-auto">
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-2 text-sm text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white mb-4 transition"
+      >
+        <ArrowLeftIcon className="size-4" /> Back
+      </button>
       <h1 className="text-2xl font-semibold mb-6 text-gray-900 dark:text-white">
         Settings
       </h1>

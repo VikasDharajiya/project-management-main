@@ -71,7 +71,7 @@ export const updateTaskThunk = createAsyncThunk(
         taskId,
         taskData,
       );
-      return { task: data.task, projectId };
+      return { task: data.task, projectId, progress: data.progress };
     } catch (err) {
       return rejectWithValue(err.message);
     }
@@ -270,33 +270,23 @@ const workspaceSlice = createSlice({
     });
 
     builder.addCase(updateTaskThunk.fulfilled, (state, action) => {
-      const { task, projectId } = action.payload;
+      const { task, projectId, progress } = action.payload;
       if (state.currentWorkspace) {
         state.currentWorkspace.projects = (
           state.currentWorkspace.projects || []
-        ).map((p) =>
-          p._id === projectId || p.id === projectId
-            ? {
-                ...p,
-                tasks: (p.tasks || []).map((t) =>
-                  t._id === task._id ? task : t,
-                ),
-              }
-            : p,
-        );
-      }
-    });
-
-    builder.addCase(deleteTaskThunk.fulfilled, (state, action) => {
-      const { taskId, projectId } = action.payload;
-      if (state.currentWorkspace) {
-        state.currentWorkspace.projects = (
-          state.currentWorkspace.projects || []
-        ).map((p) =>
-          p._id === projectId || p.id === projectId
-            ? { ...p, tasks: (p.tasks || []).filter((t) => t._id !== taskId) }
-            : p,
-        );
+        ).map((p) => {
+          if (p._id === projectId || p.id === projectId) {
+            const updatedTasks = (p.tasks || []).map((t) =>
+              t._id === task._id ? task : t,
+            );
+            return {
+              ...p,
+              tasks: updatedTasks,
+              progress: progress ?? p.progress,
+            };
+          }
+          return p;
+        });
       }
     });
 

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { useSelector } from "react-redux";
+import { taskAPI } from "../services/api";
 
 const typeIcons = {
   BUG: { icon: Bug, color: "text-red-500 dark:text-red-400" },
@@ -34,14 +35,21 @@ const RecentActivity = () => {
 
   useEffect(() => {
     if (!currentWorkspace) return;
-    const projects = currentWorkspace.projects || [];
-    // tasks are not embedded — each project.tasks may be undefined from API
-    const allTasks = projects.flatMap((project) => project.tasks || []);
-    setTasks(allTasks);
+    const workspaceId = currentWorkspace._id || currentWorkspace.id;
+    taskAPI
+      .getByWorkspace(workspaceId)
+      .then((data) => {
+        // Sort by updatedAt descending, take latest 10
+        const sorted = (data.tasks || [])
+          .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+          .slice(0, 10);
+        setTasks(sorted);
+      })
+      .catch(() => setTasks([]));
   }, [currentWorkspace]);
 
   return (
-    <div className="bg-white dark:bg-zinc-950 dark:bg-gradient-to-br dark:from-zinc-800/70 dark:to-zinc-900/50 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 rounded-lg transition-all overflow-hidden">
+    <div className="bg-white dark:bg-gradient-to-br dark:from-zinc-800/70 dark:to-zinc-900/50 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 rounded-lg transition-all overflow-hidden">
       <div className="border-b border-zinc-200 dark:border-zinc-800 p-4">
         <h2 className="text-lg text-zinc-800 dark:text-zinc-200">
           Recent Activity
@@ -80,7 +88,7 @@ const RecentActivity = () => {
                           {task.title}
                         </h4>
                         <span
-                          className={`ml-2 px-2 py-1 rounded text-xs ${statusColors[task.status] || "bg-zinc-300 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300"}`}
+                          className={`ml-2 px-2 py-1 rounded text-xs flex-shrink-0 ${statusColors[task.status] || "bg-zinc-300 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300"}`}
                         >
                           {task.status?.replace("_", " ")}
                         </span>
@@ -91,15 +99,17 @@ const RecentActivity = () => {
                         </span>
                         {task.assignee && (
                           <div className="flex items-center gap-1">
-                            <div className="w-4 h-4 bg-zinc-300 dark:bg-zinc-700 rounded-full flex items-center justify-center text-[10px] text-zinc-800 dark:text-zinc-200">
+                            <div className="w-4 h-4 bg-zinc-300 dark:bg-zinc-700 rounded-full flex items-center justify-center text-[10px]">
                               {task.assignee?.name?.[0]?.toUpperCase()}
                             </div>
                             {task.assignee.name}
                           </div>
                         )}
-                        <span>
-                          {format(new Date(task.updatedAt), "MMM d, h:mm a")}
-                        </span>
+                        {task.updatedAt && (
+                          <span>
+                            {format(new Date(task.updatedAt), "MMM d, h:mm a")}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

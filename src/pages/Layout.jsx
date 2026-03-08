@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
@@ -9,28 +8,16 @@ import { fetchWorkspaces } from "../features/workspaceSlice";
 
 const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
   const theme = useSelector((state) => state.theme.theme);
-
   const dispatch = useDispatch();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    localStorage.removeItem("currentWorkspaceId");
-    navigate("/login");
-  };
 
   useEffect(() => {
     dispatch(loadTheme());
   }, [dispatch]);
-
   useEffect(() => {
     dispatch(fetchWorkspaces());
   }, [dispatch]);
 
-  // Apply theme globally
   useEffect(() => {
     if (theme === "dark") {
       document.documentElement.classList.add("dark");
@@ -45,23 +32,12 @@ const Layout = () => {
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
       />
-
       <div className="flex-1 flex flex-col h-screen">
         <Navbar
           isSidebarOpen={isSidebarOpen}
           setIsSidebarOpen={setIsSidebarOpen}
         />
-
         <div className="flex-1 h-full p-6 xl:p-10 xl:px-16 overflow-y-scroll">
-          <div className="flex justify-end mb-4">
-            <button
-              onClick={handleLogout}
-              className="bg-red-500 text-white px-4 py-2 rounded"
-            >
-              Logout
-            </button>
-          </div>
-
           <Outlet />
         </div>
       </div>

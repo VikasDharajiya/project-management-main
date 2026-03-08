@@ -1,6 +1,16 @@
 import Task from "../models/Task.js";
 import Project from "../models/Project.js";
 
+const recalculateProgress = async (projectId) => {
+  const total = await Task.countDocuments({ project: projectId });
+  const done = await Task.countDocuments({
+    project: projectId,
+    status: "DONE",
+  });
+  const progress = total > 0 ? Math.round((done / total) * 100) : 0;
+  await Project.findByIdAndUpdate(projectId, { progress });
+};
+
 // GET /api/workspaces/:workspaceId/projects/:projectId/tasks
 export const getTasks = async (req, res) => {
   try {
@@ -76,7 +86,7 @@ export const createTask = async (req, res) => {
 
     await task.populate("assignee", "name email avatar");
     await task.populate("createdBy", "name email avatar");
-
+    await recalculateProgress(req.params.projectId);
     res.status(201).json({ task });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -117,8 +127,11 @@ export const updateTask = async (req, res) => {
     await task.save();
     await task.populate("assignee", "name email avatar");
     await task.populate("createdBy", "name email avatar");
-
-    res.json({ task });
+    await recalculateProgress(task.project);
+    const updatedProject = await Project.findById(task.project).select(
+      "progress",
+    );
+    res.json({ task, progress: updatedProject.progress });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -134,7 +147,7 @@ export const deleteTask = async (req, res) => {
     });
 
     if (!task) return res.status(404).json({ message: "Task not found" });
-
+    await recalculateProgress(req.params.projectId);
     res.json({ message: "Task deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });

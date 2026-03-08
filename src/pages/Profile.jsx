@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { authAPI } from "../services/api";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeftIcon } from "lucide-react";
 
 const Profile = () => {
   const [user, setUser] = useState({ name: "", email: "", avatar: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
@@ -42,6 +45,12 @@ const Profile = () => {
 
   return (
     <div className="max-w-lg mx-auto">
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-2 text-sm text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white mb-4 transition"
+      >
+        <ArrowLeftIcon className="size-4" /> Back
+      </button>
       <h1 className="text-2xl font-semibold mb-6 text-gray-900 dark:text-white">
         Profile
       </h1>
