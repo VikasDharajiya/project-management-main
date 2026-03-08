@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { deleteProjectThunk } from "../features/workspaceSlice";
@@ -15,13 +15,13 @@ const statusColors = {
 
 const ProjectCard = ({ project }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const currentWorkspace = useSelector(
     (state) => state.workspace?.currentWorkspace,
   );
   const projectId = project._id || project.id;
 
   const handleDelete = async (e) => {
-    e.preventDefault();
     e.stopPropagation();
     if (
       !window.confirm(
@@ -39,7 +39,10 @@ const ProjectCard = ({ project }) => {
   };
 
   return (
-    <div className="relative bg-white dark:bg-gradient-to-br dark:from-zinc-800/70 dark:to-zinc-900/50 border border-gray-200 dark:border-zinc-800 hover:border-gray-300 dark:hover:border-zinc-700 rounded-lg p-5 transition-all duration-200 group">
+    <div
+      onClick={() => navigate(`/projectsDetail?id=${projectId}&tab=tasks`)}
+      className="relative cursor-pointer bg-white dark:bg-gradient-to-br dark:from-zinc-800/70 dark:to-zinc-900/50 border border-gray-200 dark:border-zinc-800 hover:border-gray-300 dark:hover:border-zinc-700 rounded-lg p-5 transition-all duration-200 group"
+    >
       {/* Delete Button */}
       <button
         onClick={handleDelete}
@@ -48,43 +51,40 @@ const ProjectCard = ({ project }) => {
         <Trash2 className="size-4" />
       </button>
 
-      <Link
-        to={`/projectsDetail?id=${projectId}&tab=tasks`}
-        className="block pr-6"
-      >
+      <div className="flex-1 min-w-0 pr-6">
         <h3 className="font-semibold text-gray-900 dark:text-zinc-200 mb-1 truncate group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors">
           {project.name}
         </h3>
         <p className="text-gray-500 dark:text-zinc-400 text-sm line-clamp-2 mb-3">
           {project.description || "No description"}
         </p>
+      </div>
 
-        <div className="flex items-center justify-between mb-4">
-          <span
-            className={`px-2 py-0.5 rounded text-xs ${statusColors[project.status] || statusColors.PLANNING}`}
-          >
-            {project.status?.replace("_", " ") || "Planning"}
-          </span>
-          <span className="text-xs text-gray-500 dark:text-zinc-500 capitalize">
-            {project.priority?.toLowerCase() || "medium"} priority
+      <div className="flex items-center justify-between mb-4">
+        <span
+          className={`px-2 py-0.5 rounded text-xs ${statusColors[project.status] || statusColors.PLANNING}`}
+        >
+          {project.status?.replace("_", " ") || "Planning"}
+        </span>
+        <span className="text-xs text-gray-500 dark:text-zinc-500 capitalize">
+          {project.priority?.toLowerCase() || "medium"} priority
+        </span>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-gray-500 dark:text-zinc-500">Progress</span>
+          <span className="text-gray-400 dark:text-zinc-400">
+            {project.progress || 0}%
           </span>
         </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-gray-500 dark:text-zinc-500">Progress</span>
-            <span className="text-gray-400 dark:text-zinc-400">
-              {project.progress || 0}%
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 dark:bg-zinc-800 h-1.5 rounded">
-            <div
-              className="h-1.5 rounded bg-blue-500 transition-all"
-              style={{ width: `${project.progress || 0}%` }}
-            />
-          </div>
+        <div className="w-full bg-gray-200 dark:bg-zinc-800 h-1.5 rounded">
+          <div
+            className="h-1.5 rounded bg-blue-500 transition-all"
+            style={{ width: `${project.progress || 0}%` }}
+          />
         </div>
-      </Link>
+      </div>
     </div>
   );
 };
