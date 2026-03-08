@@ -1,12 +1,13 @@
 import { format } from "date-fns";
 import { Plus, Save } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
-import { projectAPI } from "../services/api";
+import { useDispatch, useSelector } from "react-redux";
+import { updateProjectThunk } from "../features/workspaceSlice";
 import AddProjectMember from "./AddProjectMember";
 import toast from "react-hot-toast";
 
 export default function ProjectSettings({ project }) {
+  const dispatch = useDispatch();
   const { currentWorkspace } = useSelector((state) => state.workspace);
 
   const [formData, setFormData] = useState({
@@ -44,7 +45,9 @@ export default function ProjectSettings({ project }) {
 
     setIsSubmitting(true);
     try {
-      await projectAPI.update(workspaceId, projectId, formData);
+      await dispatch(
+        updateProjectThunk({ workspaceId, projectId, projectData: formData }),
+      ).unwrap();
       toast.success("Project updated!");
     } catch (err) {
       toast.error(err.message || "Failed to update project");

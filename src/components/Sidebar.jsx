@@ -9,11 +9,10 @@ import {
   LayoutDashboardIcon,
   UsersIcon,
   SettingsIcon,
-  UserIcon
+  UserIcon,
 } from "lucide-react";
 
 const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
-
   const menuItems = [
     { name: "Dashboard", href: "/", icon: LayoutDashboardIcon },
     { name: "Projects", href: "/projects", icon: FolderOpenIcon },
@@ -34,7 +33,6 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
     document.addEventListener("mousedown", handleClickOutside);
 
     return () => document.removeEventListener("mousedown", handleClickOutside);
-
   }, [setIsSidebarOpen]);
 
   return (
@@ -44,19 +42,14 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
         isSidebarOpen ? "left-0" : "-left-full"
       }`}
     >
-
       <WorkspaceDropdown />
 
       <hr className="border-gray-200 dark:border-zinc-800" />
 
       <div className="flex-1 overflow-y-scroll no-scrollbar flex flex-col">
-
         <div>
-
           <div className="p-4">
-
             {menuItems.map((item) => (
-
               <NavLink
                 to={item.href}
                 key={item.name}
@@ -68,25 +61,18 @@ const Sidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
                   }`
                 }
               >
-
                 <item.icon size={16} />
 
                 <p className="text-sm truncate">{item.name}</p>
-
               </NavLink>
-
             ))}
-
           </div>
 
           <MyTasksSidebar />
 
           <ProjectSidebar />
-
         </div>
-
       </div>
-
     </div>
   );
 };

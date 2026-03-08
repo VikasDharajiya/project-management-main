@@ -31,7 +31,7 @@ export const createProject = async (req, res) => {
       return res.status(404).json({ message: "Workspace not found" });
 
     const isMember = workspace.members.some(
-      (m) => m.user.toString() === req.user._id.toString()
+      (m) => m.user.toString() === req.user._id.toString(),
     );
     if (!isMember)
       return res.status(403).json({ message: "Not a workspace member" });
@@ -62,11 +62,11 @@ export const getProject = async (req, res) => {
       workspace: req.params.workspaceId,
     }).populate("createdBy", "name email avatar");
 
-    if (!project)
-      return res.status(404).json({ message: "Project not found" });
+    if (!project) return res.status(404).json({ message: "Project not found" });
 
     res.json({ project });
   } catch (error) {
+    console.error("updateProject error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -79,16 +79,26 @@ export const updateProject = async (req, res) => {
       workspace: req.params.workspaceId,
     });
 
-    if (!project)
-      return res.status(404).json({ message: "Project not found" });
+    if (!project) return res.status(404).json({ message: "Project not found" });
 
-    const { name, description, emoji, color, status, dueDate } = req.body;
+    const {
+      name,
+      description,
+      emoji,
+      color,
+      status,
+      dueDate,
+      priority,
+      progress,
+    } = req.body;
     if (name) project.name = name;
     if (description !== undefined) project.description = description;
     if (emoji) project.emoji = emoji;
     if (color) project.color = color;
-    if (status) project.status = status;
+    if (status) project.status = status.toUpperCase().replace("-", "_");
     if (dueDate !== undefined) project.dueDate = dueDate;
+    if (priority) project.priority = priority;
+    if (progress !== undefined) project.progress = progress;
 
     await project.save();
     await project.populate("createdBy", "name email avatar");
@@ -107,14 +117,42 @@ export const deleteProject = async (req, res) => {
       workspace: req.params.workspaceId,
     });
 
-    if (!project)
-      return res.status(404).json({ message: "Project not found" });
+    if (!project) return res.status(404).json({ message: "Project not found" });
 
     // Delete all tasks in this project
     await Task.deleteMany({ project: project._id });
     await project.deleteOne();
 
     res.json({ message: "Project deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// POST /api/workspaces/:workspaceId/projects/:projectId/members
+export const addProjectMember = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const { default: User } = await import("../models/User.js");
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const project = await Project.findOne({
+      _id: req.params.projectId,
+      workspace: req.params.workspaceId,
+    });
+    if (!project) return res.status(404).json({ message: "Project not found" });
+
+    const already = project.members?.some(
+      (m) => m.user?.toString() === user._id.toString(),
+    );
+    if (already) return res.status(400).json({ message: "Already a member" });
+
+    project.members = project.members || [];
+    project.members.push({ user: user._id, role: "member" });
+    await project.save();
+
+    res.json({ message: "Member added", project });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

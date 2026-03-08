@@ -1,8 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { workspaceAPI, projectAPI, taskAPI } from "../services/api";
 
-// ─── Async Thunks ─────────────────────────────────────────────────────────────
-
 export const fetchWorkspaces = createAsyncThunk(
   "workspace/fetchAll",
   async (_, { rejectWithValue }) => {
@@ -32,6 +30,18 @@ export const createProjectThunk = createAsyncThunk(
   async ({ workspaceId, projectData }, { rejectWithValue }) => {
     try {
       const data = await projectAPI.create(workspaceId, projectData);
+      return data.project;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  },
+);
+
+export const updateProjectThunk = createAsyncThunk(
+  "workspace/updateProject",
+  async ({ workspaceId, projectId, projectData }, { rejectWithValue }) => {
+    try {
+      const data = await projectAPI.update(workspaceId, projectId, projectData);
       return data.project;
     } catch (err) {
       return rejectWithValue(err.message);
@@ -92,8 +102,6 @@ export const deleteProjectThunk = createAsyncThunk(
   },
 );
 
-// ─── Slice ────────────────────────────────────────────────────────────────────
-
 const initialState = {
   workspaces: [],
   currentWorkspace: null,
@@ -112,7 +120,6 @@ const workspaceSlice = createSlice({
           (w) => w._id === action.payload || w.id === action.payload,
         ) || null;
     },
-    // Keep these for any local-only updates
     setWorkspaces: (state, action) => {
       state.workspaces = action.payload;
     },
@@ -136,7 +143,6 @@ const workspaceSlice = createSlice({
         state.currentWorkspace = state.workspaces[0] || null;
       }
     },
-    // Legacy reducers kept for compatibility
     addProject: (state, action) => {
       if (state.currentWorkspace) {
         if (!state.currentWorkspace.projects)
@@ -197,7 +203,6 @@ const workspaceSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Fetch all workspaces
     builder
       .addCase(fetchWorkspaces.pending, (state) => {
         state.loading = true;
@@ -206,8 +211,6 @@ const workspaceSlice = createSlice({
       .addCase(fetchWorkspaces.fulfilled, (state, action) => {
         state.loading = false;
         state.workspaces = action.payload;
-
-        // Restore last used workspace or default to first
         const savedId = localStorage.getItem("currentWorkspaceId");
         const found = action.payload.find(
           (w) => w._id === savedId || w.id === savedId,
@@ -219,13 +222,11 @@ const workspaceSlice = createSlice({
         state.error = action.payload;
       });
 
-    // Create workspace
     builder.addCase(createWorkspaceThunk.fulfilled, (state, action) => {
       state.workspaces.push(action.payload);
       state.currentWorkspace = action.payload;
     });
 
-    // Create project
     builder.addCase(createProjectThunk.fulfilled, (state, action) => {
       if (state.currentWorkspace) {
         if (!state.currentWorkspace.projects)
@@ -239,7 +240,22 @@ const workspaceSlice = createSlice({
       }
     });
 
-    // Create task
+    // Update project
+    builder.addCase(updateProjectThunk.fulfilled, (state, action) => {
+      if (state.currentWorkspace) {
+        state.currentWorkspace.projects = (
+          state.currentWorkspace.projects || []
+        ).map((p) =>
+          p._id === action.payload._id ? { ...p, ...action.payload } : p,
+        );
+        state.workspaces = state.workspaces.map((w) =>
+          w._id === state.currentWorkspace._id
+            ? { ...w, projects: state.currentWorkspace.projects }
+            : w,
+        );
+      }
+    });
+
     builder.addCase(createTaskThunk.fulfilled, (state, action) => {
       const { task, projectId } = action.payload;
       if (state.currentWorkspace) {
@@ -253,7 +269,6 @@ const workspaceSlice = createSlice({
       }
     });
 
-    // Update task
     builder.addCase(updateTaskThunk.fulfilled, (state, action) => {
       const { task, projectId } = action.payload;
       if (state.currentWorkspace) {
@@ -272,7 +287,6 @@ const workspaceSlice = createSlice({
       }
     });
 
-    // Delete task
     builder.addCase(deleteTaskThunk.fulfilled, (state, action) => {
       const { taskId, projectId } = action.payload;
       if (state.currentWorkspace) {
@@ -286,7 +300,6 @@ const workspaceSlice = createSlice({
       }
     });
 
-    // Delete project
     builder.addCase(deleteProjectThunk.fulfilled, (state, action) => {
       if (state.currentWorkspace) {
         state.currentWorkspace.projects = (

@@ -24,9 +24,26 @@ const projectSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["active", "on-hold", "completed", "cancelled"],
-      default: "active",
+      enum: ["PLANNING", "ACTIVE", "ON_HOLD", "COMPLETED", "CANCELLED"],
+      default: "PLANNING",
     },
+    priority: {
+      type: String,
+      enum: ["LOW", "MEDIUM", "HIGH"],
+      default: "MEDIUM",
+    },
+    progress: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
+    members: [
+      {
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        role: { type: String, default: "member" },
+      },
+    ],
     emoji: {
       type: String,
       default: "📁",
@@ -43,7 +60,7 @@ const projectSchema = new mongoose.Schema(
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 
 // Virtual: task count

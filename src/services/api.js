@@ -56,6 +56,8 @@ export const projectAPI = {
     api.put(`/workspaces/${workspaceId}/projects/${projectId}`, data),
   delete: (workspaceId, projectId) =>
     api.delete(`/workspaces/${workspaceId}/projects/${projectId}`),
+  addMember: (workspaceId, projectId, data) =>
+    api.post(`/workspaces/${workspaceId}/projects/${projectId}/members`, data),
 };
 
 export const taskAPI = {
