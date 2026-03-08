@@ -6,13 +6,14 @@ import {
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
+import { taskAPI } from "../services/api";
 
 function MyTasksSidebar() {
   const { currentWorkspace } = useSelector((state) => state.workspace);
   const [showMyTasks, setShowMyTasks] = useState(false);
   const [myTasks, setMyTasks] = useState([]);
 
-  const toggleMyTasks = () => setShowMyTasks((prev) => !prev);
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   const getTaskStatusColor = (status) => {
     switch (status) {
@@ -29,17 +30,19 @@ function MyTasksSidebar() {
 
   useEffect(() => {
     if (!currentWorkspace) return;
-    const projects = currentWorkspace.projects || [];
-    // tasks are not embedded in projects from the API
-    // show empty for now until tasks are loaded per-project
-    const allTasks = projects.flatMap((project) => project.tasks || []);
-    setMyTasks(allTasks);
+    const workspaceId = currentWorkspace._id || currentWorkspace.id;
+
+    // Fetch all tasks in workspace assigned to current user
+    taskAPI
+      .getByWorkspace(workspaceId, { assignee: user._id })
+      .then((data) => setMyTasks(data.tasks || []))
+      .catch(() => setMyTasks([]));
   }, [currentWorkspace]);
 
   return (
     <div className="mt-6 px-3">
       <div
-        onClick={toggleMyTasks}
+        onClick={() => setShowMyTasks((prev) => !prev)}
         className="flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-800"
       >
         <div className="flex items-center gap-2">
@@ -66,27 +69,31 @@ function MyTasksSidebar() {
                 No tasks assigned
               </div>
             ) : (
-              myTasks.map((task, index) => (
-                <Link
-                  key={task._id || index}
-                  to={`/taskDetails?projectId=${task.project}&taskId=${task._id}`}
-                  className="w-full rounded-lg transition-all duration-200 text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white"
-                >
-                  <div className="flex items-center gap-2 px-3 py-2 w-full min-w-0">
-                    <div
-                      className={`w-2 h-2 rounded-full ${getTaskStatusColor(task.status)} flex-shrink-0`}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium truncate">
-                        {task.title}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-zinc-500 lowercase">
-                        {task.status?.replace("_", " ")}
-                      </p>
+              myTasks.map((task) => {
+                const taskId = task._id || task.id;
+                const projectId = task.project?._id || task.project;
+                return (
+                  <Link
+                    key={taskId}
+                    to={`/taskDetails?projectId=${projectId}&taskId=${taskId}`}
+                    className="w-full rounded-lg transition-all duration-200 text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-black dark:hover:text-white"
+                  >
+                    <div className="flex items-center gap-2 px-3 py-2 w-full min-w-0">
+                      <div
+                        className={`w-2 h-2 rounded-full ${getTaskStatusColor(task.status)} flex-shrink-0`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">
+                          {task.title}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-zinc-500 lowercase">
+                          {task.status?.replace("_", " ")}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </Link>
-              ))
+                  </Link>
+                );
+              })
             )}
           </div>
         </div>
@@ -96,3 +103,5 @@ function MyTasksSidebar() {
 }
 
 export default MyTasksSidebar;
+// Note: backend route needed:
+// GET /api/workspaces/:workspaceId/tasks?assignee=userId

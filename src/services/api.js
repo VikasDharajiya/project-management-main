@@ -4,13 +4,6 @@ const request = async (method, path, body = null) => {
   const headers = { "Content-Type": "application/json" };
 
   const token = localStorage.getItem("token");
-  console.log(
-    "API REQUEST:",
-    method,
-    path,
-    "token:",
-    token ? "EXISTS" : "MISSING",
-  ); // ADD THIS
 
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;

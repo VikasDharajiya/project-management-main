@@ -16,13 +16,19 @@ const Profile = () => {
   }, []);
 
   const handleUpdateProfile = async () => {
+    if (!user.name.trim()) {
+      toast.error("Name cannot be empty");
+      return;
+    }
     setIsSubmitting(true);
     try {
-      const data = await authAPI.updateProfile({ name: user.name });
-      localStorage.setItem(
-        "user",
-        JSON.stringify({ ...user, name: data.user?.name || user.name }),
-      );
+      const data = await authAPI.updateProfile({ name: user.name.trim() });
+      const updatedUser = {
+        ...JSON.parse(localStorage.getItem("user") || "{}"),
+        name: data.user?.name || user.name,
+      };
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setUser((prev) => ({ ...prev, name: updatedUser.name }));
       toast.success("Profile updated!");
     } catch (err) {
       toast.error(err.message || "Failed to update profile");

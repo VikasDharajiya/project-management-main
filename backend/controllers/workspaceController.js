@@ -1,15 +1,24 @@
 import Workspace from "../models/Workspace.js";
 import Project from "../models/Project.js";
 import Task from "../models/Task.js";
+import mongoose from "mongoose";
 
-// GET /api/workspaces  — all workspaces where user is a member
+// GET /api/workspaces
 export const getWorkspaces = async (req, res) => {
   try {
     const workspaces = await Workspace.find({
       "members.user": req.user._id,
     }).populate("members.user", "name email avatar");
 
-    res.json({ workspaces });
+    // Attach projects to each workspace
+    const workspacesWithProjects = await Promise.all(
+      workspaces.map(async (ws) => {
+        const projects = await Project.find({ workspace: ws._id });
+        return { ...ws.toObject(), projects };
+      }),
+    );
+
+    res.json({ workspaces: workspacesWithProjects });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -19,7 +28,6 @@ export const getWorkspaces = async (req, res) => {
 export const createWorkspace = async (req, res) => {
   try {
     const { name, description, color } = req.body;
-
     if (!name) return res.status(400).json({ message: "Name is required" });
 
     const workspace = await Workspace.create({
@@ -30,8 +38,9 @@ export const createWorkspace = async (req, res) => {
     });
 
     await workspace.populate("members.user", "name email avatar");
-
-    res.status(201).json({ workspace });
+    res
+      .status(201)
+      .json({ workspace: { ...workspace.toObject(), projects: [] } });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -42,19 +51,19 @@ export const getWorkspace = async (req, res) => {
   try {
     const workspace = await Workspace.findById(req.params.workspaceId).populate(
       "members.user",
-      "name email avatar"
+      "name email avatar",
     );
 
     if (!workspace)
       return res.status(404).json({ message: "Workspace not found" });
 
     const isMember = workspace.members.some(
-      (m) => m.user._id.toString() === req.user._id.toString()
+      (m) => m.user._id.toString() === req.user._id.toString(),
     );
-    if (!isMember)
-      return res.status(403).json({ message: "Access denied" });
+    if (!isMember) return res.status(403).json({ message: "Access denied" });
 
-    res.json({ workspace });
+    const projects = await Project.find({ workspace: workspace._id });
+    res.json({ workspace: { ...workspace.toObject(), projects } });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -68,7 +77,9 @@ export const updateWorkspace = async (req, res) => {
       return res.status(404).json({ message: "Workspace not found" });
 
     if (workspace.owner.toString() !== req.user._id.toString())
-      return res.status(403).json({ message: "Only owner can update workspace" });
+      return res
+        .status(403)
+        .json({ message: "Only owner can update workspace" });
 
     const { name, description, color } = req.body;
     if (name) workspace.name = name;
@@ -78,7 +89,8 @@ export const updateWorkspace = async (req, res) => {
     await workspace.save();
     await workspace.populate("members.user", "name email avatar");
 
-    res.json({ workspace });
+    const projects = await Project.find({ workspace: workspace._id });
+    res.json({ workspace: { ...workspace.toObject(), projects } });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -92,9 +104,10 @@ export const deleteWorkspace = async (req, res) => {
       return res.status(404).json({ message: "Workspace not found" });
 
     if (workspace.owner.toString() !== req.user._id.toString())
-      return res.status(403).json({ message: "Only owner can delete workspace" });
+      return res
+        .status(403)
+        .json({ message: "Only owner can delete workspace" });
 
-    // Delete all projects and tasks in this workspace
     const projects = await Project.find({ workspace: workspace._id });
     const projectIds = projects.map((p) => p._id);
     await Task.deleteMany({ project: { $in: projectIds } });
@@ -107,7 +120,7 @@ export const deleteWorkspace = async (req, res) => {
   }
 };
 
-// POST /api/workspaces/:workspaceId/invite  — invite member by email
+// POST /api/workspaces/:workspaceId/invite
 export const inviteMember = async (req, res) => {
   try {
     const { email, role = "member" } = req.body;
@@ -115,9 +128,8 @@ export const inviteMember = async (req, res) => {
     if (!workspace)
       return res.status(404).json({ message: "Workspace not found" });
 
-    // Only owner or admin can invite
     const inviter = workspace.members.find(
-      (m) => m.user.toString() === req.user._id.toString()
+      (m) => m.user.toString() === req.user._id.toString(),
     );
     if (!inviter || inviter.role === "member")
       return res.status(403).json({ message: "No permission to invite" });
@@ -125,10 +137,12 @@ export const inviteMember = async (req, res) => {
     const { default: User } = await import("../models/User.js");
     const userToInvite = await User.findOne({ email });
     if (!userToInvite)
-      return res.status(404).json({ message: "User with this email not found" });
+      return res
+        .status(404)
+        .json({ message: "User with this email not found" });
 
     const alreadyMember = workspace.members.some(
-      (m) => m.user.toString() === userToInvite._id.toString()
+      (m) => m.user.toString() === userToInvite._id.toString(),
     );
     if (alreadyMember)
       return res.status(400).json({ message: "User is already a member" });
@@ -157,10 +171,9 @@ export const removeMember = async (req, res) => {
       return res.status(400).json({ message: "Cannot remove workspace owner" });
 
     workspace.members = workspace.members.filter(
-      (m) => m.user.toString() !== req.params.userId
+      (m) => m.user.toString() !== req.params.userId,
     );
     await workspace.save();
-
     res.json({ message: "Member removed" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -171,25 +184,27 @@ export const removeMember = async (req, res) => {
 export const getAnalytics = async (req, res) => {
   try {
     const { workspaceId } = req.params;
+    const wsObjectId = new mongoose.Types.ObjectId(workspaceId);
 
-    const [totalProjects, totalTasks, tasksByStatus, tasksByPriority] =
-      await Promise.all([
-        Project.countDocuments({ workspace: workspaceId }),
-        Task.countDocuments({ workspace: workspaceId }),
-        Task.aggregate([
-          { $match: { workspace: require("mongoose").Types.ObjectId(workspaceId) } },
-          { $group: { _id: "$status", count: { $sum: 1 } } },
-        ]),
-        Task.aggregate([
-          { $match: { workspace: require("mongoose").Types.ObjectId(workspaceId) } },
-          { $group: { _id: "$priority", count: { $sum: 1 } } },
-        ]),
-      ]);
-
-    const completedTasks = await Task.countDocuments({
-      workspace: workspaceId,
-      status: "done",
-    });
+    const [
+      totalProjects,
+      totalTasks,
+      completedTasks,
+      tasksByStatus,
+      tasksByPriority,
+    ] = await Promise.all([
+      Project.countDocuments({ workspace: workspaceId }),
+      Task.countDocuments({ workspace: workspaceId }),
+      Task.countDocuments({ workspace: workspaceId, status: "DONE" }),
+      Task.aggregate([
+        { $match: { workspace: wsObjectId } },
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+      ]),
+      Task.aggregate([
+        { $match: { workspace: wsObjectId } },
+        { $group: { _id: "$priority", count: { $sum: 1 } } },
+      ]),
+    ]);
 
     res.json({
       totalProjects,
