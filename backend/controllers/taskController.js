@@ -4,7 +4,7 @@ import Project from "../models/Project.js";
 // GET /api/workspaces/:workspaceId/projects/:projectId/tasks
 export const getTasks = async (req, res) => {
   try {
-    const { status, priority, assignedTo } = req.query;
+    const { status, priority, assignee } = req.query;
 
     const filter = {
       project: req.params.projectId,
@@ -12,10 +12,10 @@ export const getTasks = async (req, res) => {
     };
     if (status) filter.status = status;
     if (priority) filter.priority = priority;
-    if (assignedTo) filter.assignedTo = assignedTo;
+    if (assignee) filter.assignee = assignee;
 
     const tasks = await Task.find(filter)
-      .populate("assignedTo", "name email avatar")
+      .populate("assignee", "name email avatar")
       .populate("createdBy", "name email avatar")
       .sort({ position: 1, createdAt: -1 });
 
@@ -25,18 +25,18 @@ export const getTasks = async (req, res) => {
   }
 };
 
-// GET /api/workspaces/:workspaceId/tasks  — all tasks in workspace
+// GET /api/workspaces/:workspaceId/tasks
 export const getWorkspaceTasks = async (req, res) => {
   try {
-    const { status, priority, assignedTo } = req.query;
+    const { status, priority, assignee } = req.query;
 
     const filter = { workspace: req.params.workspaceId };
     if (status) filter.status = status;
     if (priority) filter.priority = priority;
-    if (assignedTo) filter.assignedTo = assignedTo;
+    if (assignee) filter.assignee = assignee;
 
     const tasks = await Task.find(filter)
-      .populate("assignedTo", "name email avatar")
+      .populate("assignee", "name email avatar")
       .populate("createdBy", "name email avatar")
       .populate("project", "name emoji color")
       .sort({ createdAt: -1 });
@@ -50,32 +50,31 @@ export const getWorkspaceTasks = async (req, res) => {
 // POST /api/workspaces/:workspaceId/projects/:projectId/tasks
 export const createTask = async (req, res) => {
   try {
-    const { title, description, assignedTo, priority, dueDate, status } =
+    const { title, description, assignee, priority, dueDate, status, type } =
       req.body;
 
     if (!title) return res.status(400).json({ message: "Title is required" });
 
-    // Verify project belongs to workspace
     const project = await Project.findOne({
       _id: req.params.projectId,
       workspace: req.params.workspaceId,
     });
-    if (!project)
-      return res.status(404).json({ message: "Project not found" });
+    if (!project) return res.status(404).json({ message: "Project not found" });
 
     const task = await Task.create({
       title,
       description,
-      assignedTo: assignedTo || null,
-      priority,
+      assignee: assignee || null,
+      priority: priority || "MEDIUM",
       dueDate,
-      status,
+      status: status || "TODO",
+      type: type || "TASK",
       project: req.params.projectId,
       workspace: req.params.workspaceId,
       createdBy: req.user._id,
     });
 
-    await task.populate("assignedTo", "name email avatar");
+    await task.populate("assignee", "name email avatar");
     await task.populate("createdBy", "name email avatar");
 
     res.status(201).json({ task });
@@ -95,19 +94,28 @@ export const updateTask = async (req, res) => {
 
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    const { title, description, status, priority, assignedTo, dueDate, position } =
-      req.body;
+    const {
+      title,
+      description,
+      status,
+      priority,
+      assignee,
+      dueDate,
+      position,
+      type,
+    } = req.body;
 
     if (title) task.title = title;
     if (description !== undefined) task.description = description;
     if (status) task.status = status;
     if (priority) task.priority = priority;
-    if (assignedTo !== undefined) task.assignedTo = assignedTo || null;
+    if (type) task.type = type;
+    if (assignee !== undefined) task.assignee = assignee || null;
     if (dueDate !== undefined) task.dueDate = dueDate;
     if (position !== undefined) task.position = position;
 
     await task.save();
-    await task.populate("assignedTo", "name email avatar");
+    await task.populate("assignee", "name email avatar");
     await task.populate("createdBy", "name email avatar");
 
     res.json({ task });
@@ -133,15 +141,15 @@ export const deleteTask = async (req, res) => {
   }
 };
 
-// PATCH /api/workspaces/:workspaceId/projects/:projectId/tasks/reorder
+// PATCH /api/workspaces/:workspaces/:projectId/tasks/reorder
 export const reorderTasks = async (req, res) => {
   try {
-    const { tasks } = req.body; // [{ _id, position }]
+    const { tasks } = req.body;
 
     await Promise.all(
       tasks.map(({ _id, position }) =>
-        Task.findByIdAndUpdate(_id, { position })
-      )
+        Task.findByIdAndUpdate(_id, { position }),
+      ),
     );
 
     res.json({ message: "Tasks reordered" });

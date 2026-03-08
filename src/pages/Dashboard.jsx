@@ -1,26 +1,20 @@
 import { Plus } from "lucide-react";
-import { useState, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useState } from "react";
+import { useSelector } from "react-redux";
 import StatsGrid from "../components/StatsGrid";
 import ProjectOverview from "../components/ProjectOverview";
 import RecentActivity from "../components/RecentActivity";
 import TasksSummary from "../components/TasksSummary";
 import CreateProjectDialog from "../components/CreateProjectDialog";
 import CreateWorkspaceDialog from "../components/CreateWorkspaceDialog";
-import { fetchWorkspaces } from "../features/workspaceSlice";
 
 const Dashboard = () => {
-  const dispatch = useDispatch();
   const { loading, workspaces } = useSelector((state) => state.workspace);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isWorkspaceDialogOpen, setIsWorkspaceDialogOpen] = useState(false);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-
-  useEffect(() => {
-    dispatch(fetchWorkspaces());
-  }, [dispatch]);
 
   return (
     <div className="max-w-6xl mx-auto">

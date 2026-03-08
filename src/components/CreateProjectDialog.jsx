@@ -6,14 +6,15 @@ import toast from "react-hot-toast";
 
 const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen }) => {
   const dispatch = useDispatch();
-  const { currentWorkspace } = useSelector((state) => state.workspace);
+  const currentWorkspace = useSelector(
+    (state) => state.workspace?.currentWorkspace,
+  );
 
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    status: "active",
-    priority: "medium",
-    start_date: "",
+    status: "ACTIVE",
+    priority: "MEDIUM",
     end_date: "",
     emoji: "📁",
     color: "#6366f1",
@@ -23,17 +24,23 @@ const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!currentWorkspace) return;
+
+    const workspaceId = currentWorkspace?._id || currentWorkspace?.id;
+    if (!workspaceId) {
+      toast.error("No workspace selected");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       await dispatch(
         createProjectThunk({
-          workspaceId: currentWorkspace._id || currentWorkspace.id,
+          workspaceId,
           projectData: {
             name: formData.name,
             description: formData.description,
             status: formData.status,
+            priority: formData.priority,
             emoji: formData.emoji,
             color: formData.color,
             dueDate: formData.end_date || undefined,
@@ -46,9 +53,8 @@ const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen }) => {
       setFormData({
         name: "",
         description: "",
-        status: "active",
-        priority: "medium",
-        start_date: "",
+        status: "ACTIVE",
+        priority: "MEDIUM",
         end_date: "",
         emoji: "📁",
         color: "#6366f1",
@@ -83,7 +89,6 @@ const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen }) => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Emoji & Name row */}
           <div className="flex gap-2">
             <div>
               <label className="block text-sm mb-1">Icon</label>
@@ -112,7 +117,6 @@ const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen }) => {
             </div>
           </div>
 
-          {/* Description */}
           <div>
             <label className="block text-sm mb-1">Description</label>
             <textarea
@@ -125,7 +129,6 @@ const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen }) => {
             />
           </div>
 
-          {/* Status */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm mb-1">Status</label>
@@ -136,12 +139,30 @@ const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen }) => {
                 }
                 className="w-full px-3 py-2 rounded dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 mt-1 text-zinc-900 dark:text-zinc-200 text-sm"
               >
-                <option value="active">Active</option>
-                <option value="on-hold">On Hold</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="ACTIVE">Active</option>
+                <option value="PLANNING">Planning</option>
+                <option value="ON_HOLD">On Hold</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="CANCELLED">Cancelled</option>
               </select>
             </div>
+            <div>
+              <label className="block text-sm mb-1">Priority</label>
+              <select
+                value={formData.priority}
+                onChange={(e) =>
+                  setFormData({ ...formData, priority: e.target.value })
+                }
+                className="w-full px-3 py-2 rounded dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 mt-1 text-zinc-900 dark:text-zinc-200 text-sm"
+              >
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm mb-1">Color</label>
               <input
@@ -153,22 +174,19 @@ const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen }) => {
                 className="w-full h-[38px] mt-1 rounded border border-zinc-300 dark:border-zinc-700 cursor-pointer"
               />
             </div>
+            <div>
+              <label className="block text-sm mb-1">Due Date</label>
+              <input
+                type="date"
+                value={formData.end_date}
+                onChange={(e) =>
+                  setFormData({ ...formData, end_date: e.target.value })
+                }
+                className="w-full px-3 py-2 rounded dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 mt-1 text-zinc-900 dark:text-zinc-200 text-sm"
+              />
+            </div>
           </div>
 
-          {/* Due Date */}
-          <div>
-            <label className="block text-sm mb-1">Due Date</label>
-            <input
-              type="date"
-              value={formData.end_date}
-              onChange={(e) =>
-                setFormData({ ...formData, end_date: e.target.value })
-              }
-              className="w-full px-3 py-2 rounded dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 mt-1 text-zinc-900 dark:text-zinc-200 text-sm"
-            />
-          </div>
-
-          {/* Footer */}
           <div className="flex justify-end gap-3 pt-2 text-sm">
             <button
               type="button"
@@ -179,7 +197,7 @@ const CreateProjectDialog = ({ isDialogOpen, setIsDialogOpen }) => {
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !currentWorkspace}
+              disabled={isSubmitting}
               className="px-4 py-2 rounded bg-gradient-to-br from-blue-500 to-blue-600 text-white disabled:opacity-60"
             >
               {isSubmitting ? "Creating..." : "Create Project"}

@@ -5,6 +5,7 @@ import Sidebar from "../components/Sidebar";
 import { Outlet } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { loadTheme } from "../features/themeSlice";
+import { fetchWorkspaces } from "../features/workspaceSlice";
 
 const Layout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -16,11 +17,17 @@ const Layout = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    localStorage.removeItem("currentWorkspaceId");
     navigate("/login");
   };
 
   useEffect(() => {
     dispatch(loadTheme());
+  }, [dispatch]);
+
+  useEffect(() => {
+    dispatch(fetchWorkspaces());
   }, [dispatch]);
 
   // Apply theme globally

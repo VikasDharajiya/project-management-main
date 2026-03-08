@@ -22,7 +22,7 @@ const taskSchema = new mongoose.Schema(
       ref: "Workspace",
       required: true,
     },
-    assignedTo: {
+    assignee: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
@@ -34,13 +34,18 @@ const taskSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["todo", "in-progress", "in-review", "done"],
-      default: "todo",
+      enum: ["TODO", "IN_PROGRESS", "IN_REVIEW", "DONE"],
+      default: "TODO",
     },
     priority: {
       type: String,
-      enum: ["low", "medium", "high", "urgent"],
-      default: "medium",
+      enum: ["LOW", "MEDIUM", "HIGH", "URGENT"],
+      default: "MEDIUM",
+    },
+    type: {
+      type: String,
+      enum: ["TASK", "BUG", "FEATURE", "IMPROVEMENT", "OTHER"],
+      default: "TASK",
     },
     dueDate: {
       type: Date,
@@ -51,7 +56,7 @@ const taskSchema = new mongoose.Schema(
       default: 0,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Task = mongoose.model("Task", taskSchema);
